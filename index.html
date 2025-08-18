@@ -1,0 +1,1290 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Malzeme Karşılaştırma Uygulaması</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.23.0/firebase-app-compat.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.23.0/firebase-firestore-compat.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            height: 100vh;
+            padding: 5px;
+            margin: 0;
+            overflow: hidden;
+        }
+
+        .main-container {
+            display: flex;
+            max-width: 99vw;
+            width: 100%;
+            height: 98vh;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .left-panel {
+            width: 8%;
+            background: linear-gradient(180deg, #2c3e50, #34495e);
+            color: white;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            padding: 10px 5px;
+            text-align: center;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .header h1 {
+            font-size: 1em;
+            margin-bottom: 0;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            writing-mode: vertical-rl;
+            text-orientation: mixed;
+        }
+
+        .controls {
+            padding: 10px 5px;
+            background: linear-gradient(180deg, #34495e, #2c3e50);
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .right-panel {
+            width: 92%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .top-controls {
+            padding: 8px 15px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #dee2e6;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .search-box {
+            flex: 1;
+            min-width: 250px;
+            padding: 10px 15px;
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+
+        .search-box:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .btn {
+            padding: 10px 18px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-danger {
+            background: linear-gradient(45deg, #e74c3c, #c0392b);
+            color: white;
+        }
+
+        .btn-danger:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(231, 76, 60, 0.3);
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #5a6268;
+            transform: translateY(-2px);
+        }
+
+        .btn-left {
+            padding: 6px 4px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 10px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 3px;
+            color: white;
+            background: rgba(255,255,255,0.1);
+            margin-bottom: 5px;
+            text-align: center;
+            width: 100%;
+        }
+
+        .btn-left:hover {
+            background: rgba(255,255,255,0.2);
+            transform: translateY(-1px);
+        }
+
+        .btn-left.active {
+            background: rgba(102, 126, 234, 0.8);
+        }
+
+        .row-spacing-control-left {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+            color: white;
+            font-size: 11px;
+        }
+
+        .row-spacing-control-left input {
+            width: 80%;
+            padding: 4px;
+            border: 1px solid rgba(255,255,255,0.3);
+            border-radius: 4px;
+            background: rgba(255,255,255,0.1);
+            color: white;
+        }
+
+        /* Sol panel istatistik stilleri */
+        .stat-item-left {
+            text-align: center;
+            padding: 8px 5px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 8px;
+            margin-bottom: 8px;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .stat-number-left {
+            font-size: 1.4em;
+            font-weight: bold;
+            color: #fff;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+        }
+
+        .stat-label-left {
+            color: rgba(255,255,255,0.8);
+            font-size: 10px;
+            margin-top: 3px;
+            line-height: 1.2;
+        }
+
+        .select-dropdown {
+            padding: 6px 10px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 13px;
+            background: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .select-dropdown:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .table-container {
+            overflow-x: auto;
+            overflow-y: auto;
+            flex: 1;
+            border: 1px solid #dee2e6;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+        }
+
+        thead {
+            background: linear-gradient(45deg, #2c3e50, #34495e);
+            color: white;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        th, td {
+            text-align: left;
+            border: 1px solid #dee2e6;
+            position: relative;
+        }
+
+        th {
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding: 10px 6px;
+            font-size: 11px;
+            line-height: 1.2;
+        }
+
+        td {
+            font-size: 13px;
+            padding: 4px 6px;
+            line-height: 1.3;
+        }
+
+        .row-number {
+            width: 45px;
+            text-align: center;
+            font-weight: bold;
+            background: #f8f9fa;
+        }
+
+        .code-column {
+            width: 100px;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+        }
+
+        .name-column {
+            min-width: 400px;
+            max-width: 500px;
+            word-break: break-word;
+        }
+
+        .number-input {
+            width: 70px;
+            padding: 4px 2px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            text-align: center;
+            font-size: 12px;
+        }
+
+        .unit-input {
+            width: 90px;
+            padding: 4px 2px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+
+        .row-green {
+            background-color: #d4edda !important;
+        }
+
+        .row-red {
+            background-color: #f8d7da !important;
+        }
+
+        .row-hover:hover {
+            background-color: #e3f2fd !important;
+            transform: scale(1.005);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            transition: all 0.2s ease;
+        }
+
+        .checkbox-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .checkbox-container input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+
+        .drag-handle {
+            cursor: move;
+            padding: 4px;
+            background: #f8f9fa;
+            border-right: 1px solid #dee2e6;
+            text-align: center;
+            user-select: none;
+            width: 35px;
+        }
+
+        .drag-handle:hover {
+            background: #e9ecef;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 3px;
+            justify-content: center;
+            width: 80px;
+        }
+
+        .action-btn {
+            padding: 4px 6px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 11px;
+            transition: all 0.2s ease;
+        }
+
+        .edit-btn {
+            background: #ffc107;
+            color: #212529;
+        }
+
+        .edit-btn:hover {
+            background: #ffca2c;
+        }
+
+        .delete-btn {
+            background: #dc3545;
+            color: white;
+        }
+
+        .delete-btn:hover {
+            background: #c82333;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 30px;
+            font-size: 16px;
+            color: #6c757d;
+        }
+
+        .stats {
+            padding: 15px 20px;
+            background: #f8f9fa;
+            border-top: 1px solid #dee2e6;
+            display: flex;
+            justify-content: space-around;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .stat-item {
+            text-align: center;
+            padding: 12px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            min-width: 120px;
+        }
+
+        .stat-number {
+            font-size: 1.8em;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .stat-label {
+            color: #6c757d;
+            font-size: 12px;
+            margin-top: 5px;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+
+        .modal-content {
+            background-color: white;
+            margin: 15% auto;
+            padding: 30px;
+            border-radius: 15px;
+            width: 400px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+        }
+
+        .modal h3 {
+            margin-bottom: 20px;
+            color: #2c3e50;
+        }
+
+        .modal input {
+            width: 100%;
+            padding: 12px;
+            margin: 10px 0;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            margin-top: 20px;
+        }
+
+        /* Özel satır yüksekliği için sınıf */
+        .compact-row {
+            height: 35px !important;
+        }
+
+        @media (max-width: 768px) {
+            .main-container {
+                flex-direction: column;
+                margin: 5px;
+                border-radius: 10px;
+            }
+
+            .left-panel {
+                width: 100%;
+                max-height: 200px;
+                overflow-y: auto;
+            }
+
+            .right-panel {
+                width: 100%;
+            }
+
+            .header h1 {
+                writing-mode: horizontal-tb;
+                text-orientation: initial;
+                font-size: 1.5em;
+            }
+
+            .controls {
+                flex-direction: row;
+                flex-wrap: wrap;
+                padding: 15px;
+            }
+
+            .btn-left {
+                flex-direction: row;
+                width: auto;
+                padding: 8px 12px;
+                font-size: 12px;
+            }
+            
+            .top-controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .search-box {
+                min-width: auto;
+            }
+            
+            th, td {
+                padding: 6px 3px;
+                font-size: 11px;
+            }
+
+            .name-column {
+                min-width: 200px;
+                max-width: 250px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="main-container">
+        <div class="left-panel">
+            <div class="header">
+                <h1>🏥 Malzeme Karşılaştırma</h1>
+            </div>
+
+            <div class="controls">
+                <button class="btn-left" onclick="toggleZeroItems()">
+                    <span>📊</span>
+                    <span id="toggleZeroText">Sıfır Gizle</span>
+                </button>
+                
+                <button class="btn-left" onclick="clearAllQuantities()">
+                    <span>🗑️</span>
+                    <span>Sıfırla</span>
+                </button>
+                
+                <button class="btn-left" onclick="exportData()">
+                    <span>📥</span>
+                    <span>Dışa Aktar</span>
+                </button>
+
+                <button class="btn-left" onclick="deleteFilteredItems()" style="background: rgba(220, 53, 69, 0.3); border: 1px solid rgba(220, 53, 69, 0.5);">
+                    <span>🗑️</span>
+                    <span>Boşları Sil</span>
+                </button>
+
+                <div style="border-top: 1px solid rgba(255,255,255,0.2); margin: 8px 0; padding-top: 8px;">
+                    <label style="color: white; font-size: 10px; margin-bottom: 3px; display: block;">İstem Durumu:</label>
+                    <select id="istemFilter" class="select-dropdown" onchange="filterByIstemDurumu()" style="width: 100%; background: rgba(255,255,255,0.1); color: white; border: 1px solid rgba(255,255,255,0.3); font-size: 10px; padding: 3px 5px;">
+                        <option value="evet">Evet</option>
+                        <option value="hayir">Hayır</option>
+                        <option value="bos">Boş</option>
+                        <option value="tumu">Tümü</option>
+                    </select>
+                </div>
+                
+                <div class="row-spacing-control-left">
+                    <label>Satır Aralığı:</label>
+                    <input type="range" id="rowSpacing" min="2" max="15" value="5" onchange="updateRowSpacing()">
+                    <span id="spacingValue">5px</span>
+                </div>
+
+                <!-- İstatistikler Sol Panelde -->
+                <div style="border-top: 1px solid rgba(255,255,255,0.2); margin: 8px 0 0 0; padding-top: 8px;">
+                    <div class="stat-item-left">
+                        <div class="stat-number-left" id="totalItems">0</div>
+                        <div class="stat-label-left">Toplam Malzeme</div>
+                    </div>
+                    <div class="stat-item-left">
+                        <div class="stat-number-left" id="matchedItems">0</div>
+                        <div class="stat-label-left">Eşleşen Kodlar</div>
+                    </div>
+                    <div class="stat-item-left">
+                        <div class="stat-number-left" id="unmatchedItems">0</div>
+                        <div class="stat-label-left">Eşleşmeyen Kodlar</div>
+                    </div>
+                    <div class="stat-item-left">
+                        <div class="stat-number-left" id="totalQuantity">0</div>
+                        <div class="stat-label-left">Toplam İstem</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="right-panel">
+            <div class="top-controls">
+                <input type="text" class="search-box" id="searchBox" placeholder="🔍 Malzeme adı ile ara...">
+            </div>
+
+        <div class="table-container">
+            <table id="dataTable">
+                <thead>
+                    <tr>
+                        <th class="row-number">#</th>
+                        <th>Sürükle</th>
+                        <th>İstem Durumu</th>
+                        <th>Kod</th>
+                        <th>Malzeme Adı</th>
+                        <th>Toplam Adet</th>
+                        <th>İstem Birimi</th>
+                        <th>Girişimsel</th>
+                        <th>Yara Bakım</th>
+                        <th>Poliklinik</th>
+                        <th>İşlemler</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody">
+                    <tr>
+                        <td colspan="11" class="loading">
+                            📡 Veriler yükleniyor...
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Düzenleme Modal -->
+    <div id="editModal" class="modal">
+        <div class="modal-content">
+            <h3>📝 Satır Düzenle</h3>
+            <input type="hidden" id="editRowId">
+            <input type="text" id="editCode" placeholder="Kod">
+            <input type="text" id="editName" placeholder="Malzeme Adı">
+            <input type="text" id="editUnit" placeholder="İstem Birimi">
+            <input type="number" id="editGirisimsel" placeholder="Girişimsel">
+            <input type="number" id="editYaraBakim" placeholder="Yara Bakım">
+            <input type="number" id="editPoliklinik" placeholder="Poliklinik">
+            <div class="modal-buttons">
+                <button class="btn btn-secondary" onclick="closeEditModal()">İptal</button>
+                <button class="btn btn-primary" onclick="saveEdit()">Kaydet</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Firebase yapılandırması
+        const firebaseConfig = {
+            apiKey: "AIzaSyBPw48YAnUvyV09IIn2h3typQ45NV5Gmpw",
+            authDomain: "malzemetakipuygulamasi.firebaseapp.com",
+            projectId: "malzemetakipuygulamasi",
+            storageBucket: "malzemetakipuygulamasi.firebasestorage.app",
+            messagingSenderId: "413490011559",
+            appId: "1:413490011559:web:c304bc9559fe5ee7baaa82",
+            measurementId: "G-ZEPKQ4BPW6"
+        };
+
+        // Firebase başlatma
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        // Global değişkenler
+        let allData = [];
+        let stockCodes = [];
+        let filteredData = [];
+        let showZeroItems = true;
+        let draggedRow = null;
+        let istemFilter = 'evet'; // Varsayılan olarak "evet" seçili
+
+        // Veri yükleme
+        async function loadData() {
+            try {
+                console.log('📡 Veriler yükleniyor...');
+                
+                // Malzemeler koleksiyonundan veri çek
+                const malzemelerSnapshot = await db.collection('malzemeler').get();
+                const malzemelerData = {};
+                
+                malzemelerSnapshot.forEach(doc => {
+                    malzemelerData[doc.id] = {
+                        kod: doc.data().kod || '',
+                        malzemeAdi: doc.data().malzemeAdi || '',
+                        istemDurumu: doc.data().istemDurumu || '',
+                        istemBirimi: doc.data().istemBirimi || '',
+                        girisimsel: doc.data().girisimsel || 0,
+                        yaraBakim: doc.data().yaraBakim || 0,
+                        poliklinik: doc.data().poliklinik || 0,
+                        rowNumber: doc.data().rowNumber || 0
+                    };
+                });
+
+                // Stok sistemi kodlarını çek
+                const stokSnapshot = await db.collection('malzeme_stok_sistemi').get();
+                stockCodes = [];
+                stokSnapshot.forEach(doc => {
+                    if (doc.data().kod) {
+                        stockCodes.push(doc.data().kod);
+                    }
+                });
+
+                // Veriyi düzenle
+                allData = Object.keys(malzemelerData).map((id, index) => ({
+                    id: id,
+                    rowNumber: malzemelerData[id].rowNumber || (index + 1),
+                    istemDurumu: malzemelerData[id].istemDurumu,
+                    kod: malzemelerData[id].kod,
+                    malzemeAdi: malzemelerData[id].malzemeAdi,
+                    istemBirimi: malzemelerData[id].istemBirimi,
+                    girisimsel: Number(malzemelerData[id].girisimsel) || 0,
+                    yaraBakim: Number(malzemelerData[id].yaraBakim) || 0,
+                    poliklinik: Number(malzemelerData[id].poliklinik) || 0,
+                    inStock: stockCodes.includes(malzemelerData[id].kod)
+                }));
+
+                // Satır numarasına göre sırala
+                allData.sort((a, b) => a.rowNumber - b.rowNumber);
+
+                // Satır aralığını yükle
+                const settingsDoc = await db.collection('settings').doc('rowSpacing').get();
+                if (settingsDoc.exists) {
+                    const spacing = settingsDoc.data().value;
+                    document.getElementById('rowSpacing').value = spacing;
+                    updateRowSpacing();
+                }
+
+                console.log('✅ Veriler başarıyla yüklendi:', allData.length, 'malzeme');
+                renderTable();
+                updateStats();
+                
+            } catch (error) {
+                console.error('❌ Veri yükleme hatası:', error);
+                document.getElementById('tableBody').innerHTML = `
+                    <tr><td colspan="11" style="text-align: center; color: red; padding: 20px;">
+                        ❌ Veri yükleme hatası: ${error.message}
+                    </td></tr>
+                `;
+            }
+        }
+
+        // Tabloyu render etme
+        function renderTable() {
+            const tbody = document.getElementById('tableBody');
+            const searchTerm = document.getElementById('searchBox').value.toLowerCase();
+            
+            // Filtreleme
+            filteredData = allData.filter(item => {
+                const matchesSearch = item.malzemeAdi.toLowerCase().includes(searchTerm) || 
+                                    item.kod.toLowerCase().includes(searchTerm);
+                const totalAdet = item.girisimsel + item.yaraBakim + item.poliklinik;
+                const showZero = showZeroItems || totalAdet > 0;
+                
+                // İstem durumu filtresi
+                let matchesIstemFilter = true;
+                if (istemFilter === 'evet') {
+                    matchesIstemFilter = item.istemDurumu === 'evet';
+                } else if (istemFilter === 'hayir') {
+                    matchesIstemFilter = item.istemDurumu === 'hayir';
+                } else if (istemFilter === 'bos') {
+                    matchesIstemFilter = !item.istemDurumu || item.istemDurumu === '';
+                }
+                // 'tumu' seçeneği için tüm kayıtları göster
+                
+                return matchesSearch && showZero && matchesIstemFilter;
+            });
+
+            if (filteredData.length === 0) {
+                tbody.innerHTML = `
+                    <tr><td colspan="11" style="text-align: center; color: #6c757d; padding: 30px;">
+                        🔍 Aradığınız kriterlere uygun malzeme bulunamadı
+                    </td></tr>
+                `;
+                return;
+            }
+
+            tbody.innerHTML = filteredData.map(item => {
+                const totalAdet = item.girisimsel + item.yaraBakim + item.poliklinik;
+                const rowClass = item.inStock ? 'row-green' : 'row-red';
+                
+                return `
+                    <tr class="${rowClass} row-hover compact-row" data-id="${item.id}" draggable="true">
+                        <td class="row-number">
+                            <input type="number" value="${item.rowNumber}" 
+                                   onchange="updateRowNumber('${item.id}', this.value)"
+                                   style="width: 35px; text-align: center; border: none; background: transparent; font-size: 11px;">
+                        </td>
+                        <td class="drag-handle">⋮⋮</td>
+                        <td>
+                            <select onchange="updateIstemDurumu('${item.id}', this.value)" class="select-dropdown" style="font-size: 11px; padding: 2px 4px;">
+                                <option value="">Seçiniz</option>
+                                <option value="evet" ${item.istemDurumu === 'evet' ? 'selected' : ''}>Evet</option>
+                                <option value="hayir" ${item.istemDurumu === 'hayir' ? 'selected' : ''}>Hayır</option>
+                            </select>
+                        </td>
+                        <td class="code-column">${item.kod}</td>
+                        <td class="name-column">${item.malzemeAdi}</td>
+                        <td style="text-align: center; font-weight: bold; color: ${totalAdet > 0 ? '#28a745' : '#6c757d'}; width: 80px;">${totalAdet}</td>
+                        <td>
+                            <input type="text" class="unit-input" value="${item.istemBirimi}" 
+                                   onchange="updateField('${item.id}', 'istemBirimi', this.value)">
+                        </td>
+                        <td>
+                            <input type="number" class="number-input" value="${item.girisimsel}" min="0"
+                                   onchange="updateQuantity('${item.id}', 'girisimsel', this.value)">
+                        </td>
+                        <td>
+                            <input type="number" class="number-input" value="${item.yaraBakim}" min="0"
+                                   onchange="updateQuantity('${item.id}', 'yaraBakim', this.value)">
+                        </td>
+                        <td>
+                            <input type="number" class="number-input" value="${item.poliklinik}" min="0"
+                                   onchange="updateQuantity('${item.id}', 'poliklinik', this.value)">
+                        </td>
+                        <td class="action-buttons">
+                            <button class="action-btn edit-btn" onclick="editRow('${item.id}')">✏️</button>
+                            <button class="action-btn delete-btn" onclick="deleteRow('${item.id}')">🗑️</button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+
+            // Drag & Drop olaylarını ekle
+            addDragAndDropEvents();
+        }
+
+        // İstem durumunu güncelleme
+        async function updateIstemDurumu(id, value) {
+            try {
+                await db.collection('malzemeler').doc(id).update({
+                    istemDurumu: value
+                });
+                
+                const item = allData.find(i => i.id === id);
+                if (item) item.istemDurumu = value;
+                
+                console.log('✅ İstem durumu güncellendi');
+            } catch (error) {
+                console.error('❌ İstem durumu güncelleme hatası:', error);
+            }
+        }
+
+        // İstem durumuna göre filtreleme
+        function filterByIstemDurumu() {
+            istemFilter = document.getElementById('istemFilter').value;
+            renderTable();
+            updateStats();
+        }
+
+        // Alan güncelleme
+        async function updateField(id, field, value) {
+            try {
+                await db.collection('malzemeler').doc(id).update({
+                    [field]: value
+                });
+                
+                const item = allData.find(i => i.id === id);
+                if (item) item[field] = value;
+                
+                console.log(`✅ ${field} güncellendi`);
+            } catch (error) {
+                console.error(`❌ ${field} güncelleme hatası:`, error);
+            }
+        }
+
+        // Miktar güncelleme
+        async function updateQuantity(id, field, value) {
+            const numValue = Number(value) || 0;
+            
+            try {
+                await db.collection('malzemeler').doc(id).update({
+                    [field]: numValue
+                });
+                
+                const item = allData.find(i => i.id === id);
+                if (item) {
+                    item[field] = numValue;
+                    renderTable(); // Toplam adet güncellemesi için
+                    updateStats();
+                }
+                
+                console.log(`✅ ${field} miktarı güncellendi`);
+            } catch (error) {
+                console.error(`❌ ${field} miktar güncelleme hatası:`, error);
+            }
+        }
+
+        // Satır numarası güncelleme
+        async function updateRowNumber(id, newNumber) {
+            const num = Number(newNumber) || 1;
+            
+            try {
+                await db.collection('malzemeler').doc(id).update({
+                    rowNumber: num
+                });
+                
+                const item = allData.find(i => i.id === id);
+                if (item) {
+                    item.rowNumber = num;
+                    allData.sort((a, b) => a.rowNumber - b.rowNumber);
+                    renderTable();
+                }
+                
+                console.log('✅ Satır numarası güncellendi');
+            } catch (error) {
+                console.error('❌ Satır numarası güncelleme hatası:', error);
+            }
+        }
+
+        // Satır aralığı güncelleme
+        async function updateRowSpacing() {
+            const spacing = document.getElementById('rowSpacing').value;
+            document.getElementById('spacingValue').textContent = spacing + 'px';
+            
+            const rows = document.querySelectorAll('#tableBody tr');
+            rows.forEach(row => {
+                row.style.height = spacing + 'px';
+            });
+
+            // Ayarı kaydet
+            try {
+                await db.collection('settings').doc('rowSpacing').set({
+                    value: Number(spacing)
+                });
+            } catch (error) {
+                console.error('❌ Satır aralığı kaydetme hatası:', error);
+            }
+        }
+
+        // Sıfır adetlileri gizle/göster
+        function toggleZeroItems() {
+            showZeroItems = !showZeroItems;
+            const button = document.getElementById('toggleZeroText');
+            button.textContent = showZeroItems ? 'Sıfır Gizle' : 'Sıfır Göster';
+            renderTable();
+            updateStats();
+        }
+
+        // Tüm miktarları sıfırla
+        async function clearAllQuantities() {
+            if (!confirm('⚠️ Tüm girişimsel, yara bakım ve poliklinik miktarlarını sıfırlamak istediğinizden emin misiniz?')) {
+                return;
+            }
+
+            try {
+                const batch = db.batch();
+                
+                allData.forEach(item => {
+                    const docRef = db.collection('malzemeler').doc(item.id);
+                    batch.update(docRef, {
+                        girisimsel: 0,
+                        yaraBakim: 0,
+                        poliklinik: 0
+                    });
+                    
+                    item.girisimsel = 0;
+                    item.yaraBakim = 0;
+                    item.poliklinik = 0;
+                });
+
+                await batch.commit();
+                renderTable();
+                updateStats();
+                
+                console.log('✅ Tüm miktarlar sıfırlandı');
+                alert('✅ Tüm miktarlar başarıyla sıfırlandı!');
+            } catch (error) {
+                console.error('❌ Miktarları sıfırlama hatası:', error);
+                alert('❌ Miktarları sıfırlama hatası: ' + error.message);
+            }
+        }
+
+        // Satır düzenleme
+        function editRow(id) {
+            const item = allData.find(i => i.id === id);
+            if (!item) return;
+
+            document.getElementById('editRowId').value = id;
+            document.getElementById('editCode').value = item.kod;
+            document.getElementById('editName').value = item.malzemeAdi;
+            document.getElementById('editUnit').value = item.istemBirimi;
+            document.getElementById('editGirisimsel').value = item.girisimsel;
+            document.getElementById('editYaraBakim').value = item.yaraBakim;
+            document.getElementById('editPoliklinik').value = item.poliklinik;
+
+            document.getElementById('editModal').style.display = 'block';
+        }
+
+        // Düzenleme modal kapatma
+        function closeEditModal() {
+            document.getElementById('editModal').style.display = 'none';
+        }
+
+        // Düzenleme kaydetme
+        async function saveEdit() {
+            const id = document.getElementById('editRowId').value;
+            const updateData = {
+                kod: document.getElementById('editCode').value,
+                malzemeAdi: document.getElementById('editName').value,
+                istemBirimi: document.getElementById('editUnit').value,
+                girisimsel: Number(document.getElementById('editGirisimsel').value) || 0,
+                yaraBakim: Number(document.getElementById('editYaraBakim').value) || 0,
+                poliklinik: Number(document.getElementById('editPoliklinik').value) || 0
+            };
+
+            try {
+                await db.collection('malzemeler').doc(id).update(updateData);
+                
+                const item = allData.find(i => i.id === id);
+                if (item) {
+                    Object.assign(item, updateData);
+                    item.inStock = stockCodes.includes(updateData.kod);
+                }
+                
+                renderTable();
+                updateStats();
+                closeEditModal();
+                
+                console.log('✅ Satır güncellendi');
+            } catch (error) {
+                console.error('❌ Satır güncelleme hatası:', error);
+                alert('❌ Güncelleme hatası: ' + error.message);
+            }
+        }
+
+        // Satır silme
+        async function deleteRow(id) {
+            if (!confirm('⚠️ Bu satırı silmek istediğinizden emin misiniz?')) {
+                return;
+            }
+
+            try {
+                await db.collection('malzemeler').doc(id).delete();
+                allData = allData.filter(item => item.id !== id);
+                renderTable();
+                updateStats();
+                
+                console.log('✅ Satır silindi');
+            } catch (error) {
+                console.error('❌ Satır silme hatası:', error);
+                alert('❌ Silme hatası: ' + error.message);
+            }
+        }
+
+        // İstatistikleri güncelleme
+        function updateStats() {
+            const totalItems = filteredData.length;
+            const matchedItems = filteredData.filter(item => item.inStock).length;
+            const unmatchedItems = totalItems - matchedItems;
+            const totalQuantity = filteredData.reduce((sum, item) => 
+                sum + item.girisimsel + item.yaraBakim + item.poliklinik, 0);
+
+            document.getElementById('totalItems').textContent = totalItems;
+            document.getElementById('matchedItems').textContent = matchedItems;
+            document.getElementById('unmatchedItems').textContent = unmatchedItems;
+            document.getElementById('totalQuantity').textContent = totalQuantity;
+        }
+
+        // Drag & Drop işlevselliği
+        function addDragAndDropEvents() {
+            const rows = document.querySelectorAll('#tableBody tr[data-id]');
+            const tableContainer = document.querySelector('.table-container');
+            
+            rows.forEach(row => {
+                row.addEventListener('dragstart', (e) => {
+                    draggedRow = row;
+                    row.style.opacity = '0.5';
+                });
+                
+                row.addEventListener('dragend', (e) => {
+                    row.style.opacity = '1';
+                    draggedRow = null;
+                });
+                
+                row.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    
+                    // Auto-scroll functionality
+                    const rect = tableContainer.getBoundingClientRect();
+                    const scrollMargin = 50; // 50px margin for scroll trigger
+                    const scrollSpeed = 10; // Scroll speed
+                    
+                    // Scroll up
+                    if (e.clientY - rect.top < scrollMargin) {
+                        tableContainer.scrollTop -= scrollSpeed;
+                    }
+                    // Scroll down
+                    else if (rect.bottom - e.clientY < scrollMargin) {
+                        tableContainer.scrollTop += scrollSpeed;
+                    }
+                });
+                
+                row.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    if (draggedRow && draggedRow !== row) {
+                        swapRows(draggedRow.dataset.id, row.dataset.id);
+                    }
+                });
+            });
+            
+            // Table container için dragover event'i ekle (boş alanlarda da scroll çalışsın)
+            tableContainer.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                
+                const rect = tableContainer.getBoundingClientRect();
+                const scrollMargin = 50;
+                const scrollSpeed = 10;
+                
+                // Scroll up
+                if (e.clientY - rect.top < scrollMargin) {
+                    tableContainer.scrollTop -= scrollSpeed;
+                }
+                // Scroll down  
+                else if (rect.bottom - e.clientY < scrollMargin) {
+                    tableContainer.scrollTop += scrollSpeed;
+                }
+            });
+        }
+
+        // Satır sıralama - sürüklenen üste geçer
+        async function swapRows(draggedId, targetId) {
+            const draggedItem = allData.find(i => i.id === draggedId);
+            const targetItem = allData.find(i => i.id === targetId);
+            
+            if (!draggedItem || !targetItem) return;
+
+            try {
+                const draggedRowNumber = draggedItem.rowNumber;
+                const targetRowNumber = targetItem.rowNumber;
+
+                // Sürüklenen malzeme target'ın üstüne geçecek
+                const newRowNumber = targetRowNumber;
+                
+                // Diğer tüm malzemelerin sıra numaralarını güncelle
+                const batch = db.batch();
+                
+                // Sürüklenen malzemeyi yeni pozisyona yerleştir
+                draggedItem.rowNumber = newRowNumber;
+                batch.update(db.collection('malzemeler').doc(draggedId), { rowNumber: newRowNumber });
+                
+                // Diğer malzemelerin sıra numaralarını kaydır
+                allData.forEach(item => {
+                    if (item.id !== draggedId) {
+                        if (draggedRowNumber < targetRowNumber) {
+                            // Aşağıdan yukarıya sürükleme - araya giren malzemeler aşağı kayar
+                            if (item.rowNumber > draggedRowNumber && item.rowNumber <= targetRowNumber) {
+                                item.rowNumber -= 1;
+                                batch.update(db.collection('malzemeler').doc(item.id), { rowNumber: item.rowNumber });
+                            }
+                        } else {
+                            // Yukarıdan aşağıya sürükleme - araya giren malzemeler yukarı kayar
+                            if (item.rowNumber >= targetRowNumber && item.rowNumber < draggedRowNumber) {
+                                item.rowNumber += 1;
+                                batch.update(db.collection('malzemeler').doc(item.id), { rowNumber: item.rowNumber });
+                            }
+                        }
+                    }
+                });
+
+                await batch.commit();
+
+                // Tabloyu yeniden render et
+                allData.sort((a, b) => a.rowNumber - b.rowNumber);
+                renderTable();
+                
+                console.log('✅ Satır sıralaması güncellendi - sürüklenen malzeme üstte');
+            } catch (error) {
+                console.error('❌ Satır sıralama hatası:', error);
+            }
+        }
+
+        // Boş filtrelenmiş kayıtları toplu silme
+        async function deleteFilteredItems() {
+            // Sadece "bos" filtresi aktifken çalışsın
+            if (istemFilter !== 'bos') {
+                alert('⚠️ Bu özellik sadece "Boş" filtresi seçiliyken kullanılabilir!');
+                return;
+            }
+
+            const emptyItems = allData.filter(item => !item.istemDurumu || item.istemDurumu === '');
+            
+            if (emptyItems.length === 0) {
+                alert('ℹ️ Silinecek boş kayıt bulunamadı.');
+                return;
+            }
+
+            const confirmMessage = `⚠️ ${emptyItems.length} adet boş (istem durumu olmayan) kaydı silmek istediğinizden emin misiniz?\n\nBu işlem geri alınamaz!`;
+            
+            if (!confirm(confirmMessage)) {
+                return;
+            }
+
+            try {
+                console.log('🗑️ Boş kayıtlar siliniyor...', emptyItems.length, 'adet');
+                
+                // Batch işlemi ile toplu silme
+                const batch = db.batch();
+                
+                emptyItems.forEach(item => {
+                    const docRef = db.collection('malzemeler').doc(item.id);
+                    batch.delete(docRef);
+                });
+
+                await batch.commit();
+                
+                // Yerel veriyi güncelle
+                allData = allData.filter(item => item.istemDurumu && item.istemDurumu !== '');
+                
+                renderTable();
+                updateStats();
+                
+                console.log('✅ Boş kayıtlar başarıyla silindi');
+                alert(`✅ ${emptyItems.length} adet boş kayıt başarıyla silindi!`);
+                
+            } catch (error) {
+                console.error('❌ Toplu silme hatası:', error);
+                alert('❌ Silme işlemi sırasında hata oluştu: ' + error.message);
+            }
+        }
+
+        // Veri dışa aktarma
+        function exportData() {
+            const csvContent = "data:text/csv;charset=utf-8," + 
+                "Satır No,İstem Durumu,Kod,Malzeme Adı,Toplam Adet,İstem Birimi,Girişimsel,Yara Bakım,Poliklinik,Stok Durumu\n" +
+                filteredData.map(item => {
+                    const totalAdet = item.girisimsel + item.yaraBakim + item.poliklinik;
+                    const istemDurumuText = item.istemDurumu === 'evet' ? 'Evet' : 
+                                          item.istemDurumu === 'hayir' ? 'Hayır' : 'Boş';
+                    return `${item.rowNumber},"${istemDurumuText}","${item.kod}","${item.malzemeAdi}",${totalAdet},"${item.istemBirimi}",${item.girisimsel},${item.yaraBakim},${item.poliklinik},"${item.inStock ? 'Var' : 'Yok'}"`;
+                }).join("\n");
+
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", `malzeme_listesi_${new Date().toISOString().split('T')[0]}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            console.log('✅ Veri dışa aktarıldı');
+        }
+
+        // Arama işlevselliği
+        document.getElementById('searchBox').addEventListener('input', (e) => {
+            renderTable();
+            updateStats();
+        });
+
+        // Modal dışına tıklayınca kapatma
+        window.addEventListener('click', (e) => {
+            const modal = document.getElementById('editModal');
+            if (e.target === modal) {
+                closeEditModal();
+            }
+        });
+
+        // Klavye kısayolları
+        document.addEventListener('keydown', (e) => {
+            // ESC tuşu ile modal kapatma
+            if (e.key === 'Escape') {
+                closeEditModal();
+            }
+            
+            // Ctrl+S ile veri kaydetme
+            if (e.ctrlKey && e.key === 's') {
+                e.preventDefault();
+                exportData();
+            }
+        });
+
+        // Sayfa yüklendiğinde veriyi çek
+        window.addEventListener('load', () => {
+            console.log('🚀 Uygulama başlatılıyor...');
+            // İstem durumu filtresini "evet" olarak ayarla
+            document.getElementById('istemFilter').value = 'evet';
+            loadData();
+        });
+
+        // Bağlantı durumu izleme
+        window.addEventListener('online', () => {
+            console.log('🌐 İnternet bağlantısı restore edildi');
+            loadData();
+        });
+
+        window.addEventListener('offline', () => {
+            console.log('📡 İnternet bağlantısı kesildi');
+        });
+
+        // Otomatik kaydetme (her 5 dakikada bir)
+        setInterval(() => {
+            console.log('🔄 Otomatik yedekleme...');
+            // Burada gerekirse otomatik yedekleme işlemleri yapılabilir
+        }, 300000); // 5 dakika
+
+        console.log('✅ JavaScript yüklendi ve event listener\'lar eklendi');
+    </script>
+</body>
+</html>
