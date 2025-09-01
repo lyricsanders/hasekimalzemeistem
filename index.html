@@ -64,10 +64,48 @@
             overflow-y: auto;
         }
 
-        .right-panel {
+        .content-area {
             width: 90%;
             display: flex;
+        }
+
+        .table-section {
+            width: 60%;
+            display: flex;
             flex-direction: column;
+        }
+
+        .right-section {
+            width: 40%;
+            display: flex;
+            flex-direction: column;
+            background: #f8f9fa;
+            border-left: 1px solid #dee2e6;
+        }
+
+        .right-section-header {
+            padding: 15px;
+            background: linear-gradient(45deg, #2c3e50, #34495e);
+            color: white;
+            text-align: center;
+            font-weight: 600;
+            font-size: 16px;
+        }
+
+        .right-section-content {
+            flex: 1;
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #6c757d;
+            font-size: 18px;
+        }
+
+        .iframe-container {
+            width: 100%;
+            height: 100%;
+            border: none;
         }
 
         .top-controls {
@@ -82,7 +120,7 @@
 
         .search-box {
             flex: 1;
-            min-width: 250px;
+            min-width: 200px;
             padding: 10px 15px;
             border: 2px solid #e9ecef;
             border-radius: 10px;
@@ -129,14 +167,9 @@
             background: rgba(40, 167, 69, 1);
         }
 
-        .select-dropdown {
-            padding: 1px 3px;
-            border: 2px solid #e9ecef;
-            border-radius: 2px;
-            font-size: 9px;
-            background: white;
-            cursor: pointer;
-            transition: all 0.3s ease;
+        .btn-left.active {
+            background: rgba(102, 126, 234, 0.8);
+            border: 1px solid rgba(102, 126, 234, 1);
         }
 
         .table-container {
@@ -179,7 +212,7 @@
         }
 
         .category-input {
-            width: 80px;
+            width: 60px;
             padding: 2px 4px;
             border: 1px solid #ddd;
             border-radius: 3px;
@@ -189,19 +222,18 @@
         }
 
         .code-column {
-            width: 100px;
+            width: 80px;
             font-family: 'Courier New', monospace;
             font-weight: bold;
         }
 
         .name-column {
-            min-width: 300px;
-            max-width: 400px;
+            min-width: 200px;
             word-break: break-word;
         }
 
         .number-input {
-            width: 60px;
+            width: 50px;
             padding: 3px 5px;
             border: 2px solid #dc3545;
             border-radius: 4px;
@@ -226,7 +258,7 @@
         }
 
         .unit-input {
-            width: 100px;
+            width: 60px;
             padding: 2px 4px;
             border: 1px solid #ddd;
             border-radius: 3px;
@@ -246,20 +278,11 @@
             transition: background-color 0.2s ease;
         }
 
-        .drag-handle {
-            cursor: move;
-            padding: 4px;
-            background: #f8f9fa;
-            text-align: center;
-            user-select: none;
-            width: 30px;
-        }
-
         .action-buttons {
             display: flex;
             gap: 2px;
             justify-content: center;
-            width: 70px;
+            width: 60px;
         }
 
         .action-btn {
@@ -367,11 +390,21 @@
             color: white;
         }
 
+        .total-column {
+            width: 50px;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        .istem-durumu-column {
+            width: 70px;
+        }
+
         @media (max-width: 1200px) {
             .left-panel {
                 width: 12%;
             }
-            .right-panel {
+            .content-area {
                 width: 88%;
             }
         }
@@ -406,6 +439,18 @@
                 </button>
 
                 <div style="border-top: 1px solid rgba(255,255,255,0.2); margin: 10px 0; padding-top: 10px;">
+                    <button class="btn-left" id="stokBtn" onclick="showStokPage()">
+                        <span>📦</span>
+                        <span>Stok</span>
+                    </button>
+
+                    <button class="btn-left" id="karsilastirmaBtn" onclick="showKarsilastirmaPage()">
+                        <span>⚖️</span>
+                        <span>Karşılaştırma</span>
+                    </button>
+                </div>
+
+                <div style="border-top: 1px solid rgba(255,255,255,0.2); margin: 10px 0; padding-top: 10px;">
                     <label style="color: white; font-size: 10px; margin-bottom: 5px; display: block;">İstem Durumu:</label>
                     <select id="istemFilter" onchange="filterByIstemDurumu()" style="width: 100%; background: rgba(255,255,255,0.1); color: white; border: 1px solid rgba(255,255,255,0.3); font-size: 10px; padding: 5px; border-radius: 3px;">
                         <option value="evet">Evet</option>
@@ -436,36 +481,46 @@
             </div>
         </div>
 
-        <div class="right-panel">
-            <div class="top-controls">
-                <input type="text" class="search-box" id="searchBox" placeholder="🔍 Malzeme adı veya kodu ile ara...">
+        <div class="content-area">
+            <div class="table-section">
+                <div class="top-controls">
+                    <input type="text" class="search-box" id="searchBox" placeholder="🔍 Malzeme adı veya kodu ile ara...">
+                </div>
+
+                <div class="table-container">
+                    <table id="dataTable">
+                        <thead>
+                            <tr>
+                                <th>Kategori</th>
+                                <th>İstem Durumu</th>
+                                <th>Kod</th>
+                                <th>Malzeme Adı</th>
+                                <th>Toplam</th>
+                                <th>Birim</th>
+                                <th>Girişimsel</th>
+                                <th>Yara Bakım</th>
+                                <th>Poliklinik</th>
+                                <th>İşlemler</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tableBody">
+                            <tr>
+                                <td colspan="10" class="loading">
+                                    📡 Veriler yükleniyor...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
 
-            <div class="table-container">
-                <table id="dataTable">
-                    <thead>
-                        <tr>
-                            <th>Kategori</th>
-                            <th>Sürükle</th>
-                            <th>İstem Durumu</th>
-                            <th>Kod</th>
-                            <th>Malzeme Adı</th>
-                            <th>Toplam</th>
-                            <th>Birim</th>
-                            <th>Girişimsel</th>
-                            <th>Yara Bakım</th>
-                            <th>Poliklinik</th>
-                            <th>İşlemler</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tableBody">
-                        <tr>
-                            <td colspan="11" class="loading">
-                                📡 Veriler yükleniyor...
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
+            <div class="right-section">
+                <div class="right-section-header">
+                    İçerik Paneli
+                </div>
+                <div class="right-section-content" id="rightContent">
+                    Bir sayfa seçmek için sol paneldeki butonları kullanın
+                </div>
             </div>
         </div>
     </div>
@@ -538,8 +593,8 @@
         let stockCodes = [];
         let filteredData = [];
         let showZeroItems = true;
-        let draggedRow = null;
         let istemFilter = 'evet';
+        let currentPage = null;
 
         // Sayfa yüklenme olayı
         document.addEventListener('DOMContentLoaded', function() {
@@ -560,6 +615,49 @@
                 console.error('Uygulama başlatma hatası:', error);
                 showError('Uygulama başlatılamadı: ' + error.message);
             }
+        }
+
+        // Sayfa gösterme fonksiyonları
+        function showStokPage() {
+            const rightContent = document.getElementById('rightContent');
+            const stokBtn = document.getElementById('stokBtn');
+            const karsilastirmaBtn = document.getElementById('karsilastirmaBtn');
+            
+            // Buton durumlarını güncelle
+            stokBtn.classList.add('active');
+            karsilastirmaBtn.classList.remove('active');
+            
+            // İframe ile stok.html sayfasını yükle
+            rightContent.innerHTML = '<iframe src="stok.html" class="iframe-container"></iframe>';
+            currentPage = 'stok';
+        }
+
+        function showKarsilastirmaPage() {
+            const rightContent = document.getElementById('rightContent');
+            const stokBtn = document.getElementById('stokBtn');
+            const karsilastirmaBtn = document.getElementById('karsilastirmaBtn');
+            
+            // Buton durumlarını güncelle
+            stokBtn.classList.remove('active');
+            karsilastirmaBtn.classList.add('active');
+            
+            // İframe ile karsilastirma.html sayfasını yükle
+            rightContent.innerHTML = '<iframe src="karsilastirma.html" class="iframe-container"></iframe>';
+            currentPage = 'karsilastirma';
+        }
+
+        function clearRightPanel() {
+            const rightContent = document.getElementById('rightContent');
+            const stokBtn = document.getElementById('stokBtn');
+            const karsilastirmaBtn = document.getElementById('karsilastirmaBtn');
+            
+            // Buton durumlarını temizle
+            stokBtn.classList.remove('active');
+            karsilastirmaBtn.classList.remove('active');
+            
+            // İçeriği temizle
+            rightContent.innerHTML = 'Bir sayfa seçmek için sol paneldeki butonları kullanın';
+            currentPage = null;
         }
 
         // Veri yükleme fonksiyonu
@@ -638,7 +736,7 @@
             const tbody = document.getElementById('tableBody');
             tbody.innerHTML = `
                 <tr>
-                    <td colspan="11" style="text-align: center; color: #dc3545; padding: 30px; background: #f8d7da;">
+                    <td colspan="10" style="text-align: center; color: #dc3545; padding: 30px; background: #f8d7da;">
                         ❌ ${message}
                         <br><br>
                         <button onclick="location.reload()" style="padding: 10px 20px; background: #dc3545; color: white; border: none; border-radius: 5px; cursor: pointer;">
@@ -676,7 +774,7 @@
             if (filteredData.length === 0) {
                 tbody.innerHTML = `
                     <tr>
-                        <td colspan="11" style="text-align: center; color: #6c757d; padding: 30px;">
+                        <td colspan="10" style="text-align: center; color: #6c757d; padding: 30px;">
                             🔍 Aradığınız kriterlere uygun malzeme bulunamadı
                             <br><small>Farklı filtre seçeneklerini deneyiniz</small>
                         </td>
@@ -690,15 +788,14 @@
                 const rowClass = item.inStock ? 'row-green' : 'row-red';
                 
                 return `
-                    <tr class="${rowClass} row-hover" data-id="${item.id}" draggable="true">
+                    <tr class="${rowClass} row-hover" data-id="${item.id}">
                         <td>
                             <input type="text" class="category-input" value="${item.kategori}" 
                                    onchange="updateCategory('${item.id}', this.value)"
                                    placeholder="Kategori">
                         </td>
-                        <td class="drag-handle">⋮⋮</td>
-                        <td>
-                            <select onchange="updateIstemDurumu('${item.id}', this.value)" style="font-size: 10px; padding: 2px 4px; width: 80px;">
+                        <td class="istem-durumu-column">
+                            <select onchange="updateIstemDurumu('${item.id}', this.value)" style="font-size: 10px; padding: 2px 4px; width: 70px;">
                                 <option value="">Seçiniz</option>
                                 <option value="evet" ${item.istemDurumu === 'evet' ? 'selected' : ''}>Evet</option>
                                 <option value="hayir" ${item.istemDurumu === 'hayir' ? 'selected' : ''}>Hayır</option>
@@ -706,7 +803,7 @@
                         </td>
                         <td class="code-column">${item.kod}</td>
                         <td class="name-column">${item.malzemeAdi}</td>
-                        <td style="text-align: center; font-weight: bold; color: ${totalAdet > 0 ? '#28a745' : '#6c757d'};">
+                        <td class="total-column" style="color: ${totalAdet > 0 ? '#28a745' : '#6c757d'};">
                             ${totalAdet}
                         </td>
                         <td>
@@ -735,8 +832,6 @@
                     </tr>
                 `;
             }).join('');
-
-            addDragAndDropEvents();
         }
 
         // Güncelleme fonksiyonları
@@ -987,50 +1082,6 @@
             document.getElementById('matchedItems').textContent = matchedItems;
             document.getElementById('unmatchedItems').textContent = unmatchedItems;
             document.getElementById('totalQuantity').textContent = totalQuantity;
-        }
-
-        // Drag & Drop fonksiyonları
-        function addDragAndDropEvents() {
-            const rows = document.querySelectorAll('#tableBody tr[data-id]');
-            
-            rows.forEach(row => {
-                row.addEventListener('dragstart', (e) => {
-                    draggedRow = row;
-                    row.style.opacity = '0.5';
-                });
-                
-                row.addEventListener('dragend', (e) => {
-                    row.style.opacity = '1';
-                    draggedRow = null;
-                });
-                
-                row.addEventListener('dragover', (e) => {
-                    e.preventDefault();
-                });
-                
-                row.addEventListener('drop', (e) => {
-                    e.preventDefault();
-                    if (draggedRow && draggedRow !== row) {
-                        swapRows(draggedRow.dataset.id, row.dataset.id);
-                    }
-                });
-            });
-        }
-
-        async function swapRows(draggedId, targetId) {
-            const draggedItem = allData.find(i => i.id === draggedId);
-            const targetItem = allData.find(i => i.id === targetId);
-            
-            if (!draggedItem || !targetItem) return;
-
-            try {
-                await db.collection('malzemeler').doc(draggedId).update({
-                    kategori: targetItem.kategori
-                });
-                console.log('Kategori taşındı');
-            } catch (error) {
-                console.error('Kategori taşıma hatası:', error);
-            }
         }
 
         // Event listener'lar
