@@ -1,0 +1,738 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Firestore Malzeme Takip Sistemi</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.23.0/firebase-app-compat.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.23.0/firebase-firestore-compat.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .content {
+            padding: 30px;
+        }
+
+        .input-section {
+            margin-bottom: 30px;
+        }
+
+        .input-section h2 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 1.5rem;
+        }
+
+        textarea {
+            width: 100%;
+            min-height: 300px;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            resize: vertical;
+            transition: border-color 0.3s ease;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 15px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        button {
+            padding: 15px 30px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            min-width: 200px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+            color: white;
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+            color: #333;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .warning-box {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            text-align: center;
+        }
+
+        .warning-box h3 {
+            margin-bottom: 10px;
+            color: #d63031;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin: 30px 0;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            font-size: 1rem;
+            opacity: 0.9;
+        }
+
+        .status {
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            font-weight: 500;
+            text-align: center;
+        }
+
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 2px solid #c3e6cb;
+        }
+
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 2px solid #f5c6cb;
+        }
+
+        .status.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 2px solid #bee5eb;
+        }
+
+        .status.warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 2px solid #ffeaa7;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 30px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 25px;
+            background-color: #e0e0e0;
+            border-radius: 15px;
+            overflow: hidden;
+            margin: 15px 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            width: 0%;
+            transition: width 0.3s ease;
+            border-radius: 15px;
+        }
+
+        .progress-text {
+            margin-top: 10px;
+            font-weight: 600;
+            color: #667eea;
+        }
+
+        .collection-info {
+            background: #e3f2fd;
+            border: 2px solid #2196f3;
+            color: #1565c0;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px 0;
+            text-align: center;
+        }
+
+        .format-info {
+            background: #f3e5f5;
+            border: 2px solid #9c27b0;
+            color: #4a148c;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px 0;
+            font-size: 14px;
+        }
+
+        .format-info h4 {
+            margin-bottom: 10px;
+            color: #7b1fa2;
+        }
+
+        .format-example {
+            background: #f5f5f5;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+            overflow-x: auto;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔥 Firestore Malzeme Takip</h1>
+            <p>Veri Sıfırlama ve Yeniden Kaydetme Sistemi</p>
+        </div>
+
+        <div class="content">
+            <div class="collection-info">
+                <h3>📂 Koleksiyon Bilgisi</h3>
+                <p>Veriler <strong>"malzeme_stok_sistemi"</strong> koleksiyonuna kaydedilecek</p>
+            </div>
+
+            <div class="format-info">
+                <h4>📋 Desteklenen Veri Formatları</h4>
+                <p><strong>Format 1 (TAB ile ayrılmış):</strong></p>
+                <div class="format-example">55785	DREN, T-TÜP, SILIKON, 14F (DMO)	0	23	/ SUT KODU : / UBB KODU :08681330343832 / TASINIR KOD :150-03-03-270006545 / BIRIMI :AD</div>
+                
+                <p><strong>Format 2 (Çok satırlı):</strong></p>
+                <div class="format-example">22
+ACTILYSE 50 MG FLAKON
+Alteplaz 50mg Enjektabl İV 0 36
+/ SUT KODU : / UBB KODU :8699693790040 / TASINIR KOD :150-03-01-8699693790040 / BIRIMI :AD</div>
+                
+                <p><em>Her iki format da otomatik olarak algılanır ve işlenir.</em></p>
+            </div>
+
+            <div class="input-section">
+                <h2>📋 Malzeme Veri Girişi</h2>
+                <textarea id="dataInput" placeholder="Malzeme verilerini buraya yapıştırın...
+
+Format 1 örneği (TAB ile ayrılmış):
+55785	DREN, T-TÜP, SILIKON, 14F (DMO)	0	23	/ SUT KODU : / UBB KODU :08681330343832 / TASINIR KOD :150-03-03-270006545 / BIRIMI :AD
+
+Format 2 örneği (Çok satırlı):
+22
+ACTILYSE 50 MG FLAKON
+Alteplaz 50mg Enjektabl İV 0 36
+/ SUT KODU : / UBB KODU :8699693790040 / TASINIR KOD :150-03-01-8699693790040 / BIRIMI :AD"></textarea>
+                
+                <div class="button-group">
+                    <button class="btn-primary" onclick="parseAndPreview()">🔍 Veriyi Kontrol Et</button>
+                    <button class="btn-secondary" onclick="clearAll()">🗑️ Temizle</button>
+                </div>
+            </div>
+
+            <div class="warning-box" id="warningBox" style="display: none;">
+                <h3>⚠️ DİKKAT!</h3>
+                <p>Bu işlem mevcut <strong>"malzeme_stok_sistemi"</strong> koleksiyonundaki TÜM verileri silecek ve yeni verilerle değiştirecektir.</p>
+                <p>Bu işlem <strong>GERİ ALINAMAZ!</strong></p>
+            </div>
+
+            <div class="button-group" id="actionButtons" style="display: none;">
+                <button class="btn-danger" onclick="deleteAndSave()" id="deleteBtn">🔥 Koleksiyonu Sil ve Yeni Veriyi Kaydet</button>
+            </div>
+
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                <p id="loadingText">İşleniyor...</p>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+                <div class="progress-text" id="progressText">0%</div>
+            </div>
+
+            <div id="status"></div>
+
+            <div class="stats" id="statsSection" style="display: none;">
+                <div class="stat-card">
+                    <div class="stat-number" id="totalItems">0</div>
+                    <div class="stat-label">Toplam Kayıt</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="validItems">0</div>
+                    <div class="stat-label">Geçerli Kayıt</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="errorItems">0</div>
+                    <div class="stat-label">Hatalı Kayıt</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Firebase yapılandırması
+        const firebaseConfig = {
+            apiKey: "AIzaSyBPw48YAnUvyV09IIn2h3typQ45NV5Gmpw",
+            authDomain: "malzemetakipuygulamasi.firebaseapp.com",
+            projectId: "malzemetakipuygulamasi",
+            storageBucket: "malzemetakipuygulamasi.firebasestorage.app",
+            messagingSenderId: "413490011559",
+            appId: "1:413490011559:web:c304bc9559fe5ee7baaa82",
+            measurementId: "G-ZEPKQ4BPW6"
+        };
+
+        // Firebase'i başlat
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        const COLLECTION_NAME = 'malzeme_stok_sistemi';
+
+        let parsedData = [];
+        let validCount = 0;
+        let errorCount = 0;
+
+        function showStatus(message, type = 'info') {
+            const statusDiv = document.getElementById('status');
+            statusDiv.innerHTML = `<div class="status ${type}">${message}</div>`;
+        }
+
+        function showLoading(show = true, text = 'İşleniyor...') {
+            const loading = document.getElementById('loading');
+            const loadingText = document.getElementById('loadingText');
+            loading.style.display = show ? 'block' : 'none';
+            loadingText.textContent = text;
+        }
+
+        function updateProgress(percent, text = '') {
+            const progressFill = document.getElementById('progressFill');
+            const progressText = document.getElementById('progressText');
+            progressFill.style.width = percent + '%';
+            progressText.textContent = text || Math.round(percent) + '%';
+        }
+
+        function parseAndPreview() {
+            const input = document.getElementById('dataInput').value.trim();
+            if (!input) {
+                showStatus('❌ Lütfen veri girin!', 'error');
+                return;
+            }
+
+            showLoading(true, 'Veriler kontrol ediliyor...');
+            updateProgress(0);
+
+            setTimeout(() => {
+                try {
+                    parsedData = [];
+                    validCount = 0;
+                    errorCount = 0;
+
+                    // Format kontrolü ve veri işleme
+                    if (detectFormat(input) === 'tab') {
+                        parseTabFormat(input);
+                    } else {
+                        parseMultilineFormat(input);
+                    }
+
+                    updateProgress(100, 'Tamamlandı');
+                    showLoading(false);
+                    
+                    if (parsedData.length > 0) {
+                        displayStats();
+                        showWarningAndActions();
+                        showStatus(`✅ ${validCount} geçerli kayıt hazır! ${errorCount > 0 ? `(${errorCount} hata atlandı)` : ''}`, 'success');
+                    } else {
+                        showStatus('❌ Geçerli veri bulunamadı!', 'error');
+                        hideWarningAndActions();
+                    }
+                } catch (error) {
+                    showLoading(false);
+                    showStatus(`❌ Veri kontrol hatası: ${error.message}`, 'error');
+                    hideWarningAndActions();
+                }
+            }, 100);
+        }
+
+        function detectFormat(input) {
+            const lines = input.split('\n').filter(line => line.trim());
+            
+            // İlk birkaç satırda tab karakteri varsa tab formatı
+            for (let i = 0; i < Math.min(3, lines.length); i++) {
+                if (lines[i].includes('\t') && lines[i].split('\t').length >= 4) {
+                    return 'tab';
+                }
+            }
+            
+            return 'multiline';
+        }
+
+        function parseTabFormat(input) {
+            const lines = input.split('\n').filter(line => line.trim());
+            
+            lines.forEach((line, index) => {
+                updateProgress((index / lines.length) * 100);
+                
+                try {
+                    const item = parseTabLineData(line);
+                    if (item) {
+                        parsedData.push(item);
+                        validCount++;
+                    }
+                } catch (error) {
+                    console.error(`Tab Format - Satır ${index + 1} hatası:`, error);
+                    errorCount++;
+                }
+            });
+        }
+
+        function parseMultilineFormat(input) {
+            const lines = input.split('\n').map(line => line.trim()).filter(line => line);
+            
+            for (let i = 0; i < lines.length; i++) {
+                updateProgress((i / lines.length) * 100);
+                
+                try {
+                    // Her kayıt için 4 satır bekliyoruz
+                    if (i + 3 < lines.length) {
+                        const kod = lines[i];
+                        const malzemeAdi = lines[i + 1];
+                        const aciklama = lines[i + 2];
+                        const detay = lines[i + 3];
+                        
+                        // Kod sadece sayı olmalı
+                        if (/^\d+$/.test(kod)) {
+                            const item = parseMultilineData(kod, malzemeAdi, aciklama, detay);
+                            if (item) {
+                                parsedData.push(item);
+                                validCount++;
+                            }
+                            i += 3; // 4 satırı işledik, 3 satır atla
+                        }
+                    }
+                } catch (error) {
+                    console.error(`Multiline Format - Satır ${i + 1} hatası:`, error);
+                    errorCount++;
+                }
+            }
+        }
+
+        function parseTabLineData(line) {
+            const parts = line.split('\t').map(part => part.trim()).filter(part => part);
+            
+            if (parts.length < 4) return null;
+
+            const kod = parts[0];
+            const malzemeAdi = parts[1];
+            const minimum = parts[2] || '0';
+            const mevcutStok = parts[3] || '0';
+            
+            const detayBilgi = parts[4] || '';
+            const detaylar = parseDetailInfo(detayBilgi);
+
+            return createItemObject(kod, malzemeAdi, minimum, mevcutStok, detaylar);
+        }
+
+        function parseMultilineData(kod, malzemeAdi, aciklama, detay) {
+            // Açıklama satırından minimum ve mevcut stok bilgilerini çıkar
+            const aciklamaParts = aciklama.split(' ');
+            const minimum = aciklamaParts[aciklamaParts.length - 2] || '0';
+            const mevcutStok = aciklamaParts[aciklamaParts.length - 1] || '0';
+            
+            const detaylar = parseDetailInfo(detay);
+
+            return createItemObject(kod, malzemeAdi, minimum, mevcutStok, detaylar);
+        }
+
+        function createItemObject(kod, malzemeAdi, minimum, mevcutStok, detaylar) {
+            const minInt = parseInt(minimum) || 0;
+            const stokInt = parseInt(mevcutStok) || 0;
+            
+            return {
+                kod: kod,
+                malzemeAdi: malzemeAdi,
+                minimum: minInt,
+                mevcutStok: stokInt,
+                sutKodu: detaylar.sutKodu || '',
+                ubbKodu: detaylar.ubbKodu || '',
+                tasinirKod: detaylar.tasinirKod || '',
+                birim: detaylar.birim || 'AD',
+                kritik: detaylar.kritik || 0,
+                max: detaylar.max || 0,
+                acilMudahale: detaylar.acilMudahale || 0,
+                olusturmaTarihi: new Date(),
+                guncellemeTarihi: new Date(),
+                aktif: true,
+                stokDurumu: calculateStockStatus(stokInt, minInt, detaylar.kritik || 0)
+            };
+        }
+
+        function calculateStockStatus(mevcutStok, minimum, kritik) {
+            if (mevcutStok <= 0) return 'TUKENDI';
+            if (kritik > 0 && mevcutStok <= kritik) return 'KRITIK';
+            if (mevcutStok <= minimum) return 'DUSUK';
+            return 'NORMAL';
+        }
+
+        function parseDetailInfo(detayBilgi) {
+            const detaylar = {};
+            
+            // SUT KODU
+            const sutMatch = detayBilgi.match(/SUT KODU\s*:\s*([^\/]*)/i);
+            if (sutMatch) detaylar.sutKodu = sutMatch[1].trim();
+            
+            // UBB KODU
+            const ubbMatch = detayBilgi.match(/UBB KODU\s*:\s*([^\/]*)/i);
+            if (ubbMatch) detaylar.ubbKodu = ubbMatch[1].trim();
+            
+            // TASINIR KOD
+            const tasinirMatch = detayBilgi.match(/TASINIR KOD\s*:\s*([^\/]*)/i);
+            if (tasinirMatch) detaylar.tasinirKod = tasinirMatch[1].trim();
+            
+            // BIRIM
+            const birimMatch = detayBilgi.match(/BIRIMI\s*:\s*([^\/]*)/i);
+            if (birimMatch) detaylar.birim = birimMatch[1].trim();
+            
+            // MIN
+            const minMatch = detayBilgi.match(/Min\.?\s*=\s*(\d+)/i);
+            if (minMatch) detaylar.min = parseInt(minMatch[1]);
+            
+            // KRITIK
+            const kritikMatch = detayBilgi.match(/Kritik\.?\s*=\s*(\d+)/i);
+            if (kritikMatch) detaylar.kritik = parseInt(kritikMatch[1]);
+            
+            // MAX
+            const maxMatch = detayBilgi.match(/Max\.?\s*=\s*(\d+)/i);
+            if (maxMatch) detaylar.max = parseInt(maxMatch[1]);
+            
+            // ACIL MÜDAHALE
+            const acilMatch = detayBilgi.match(/Acil Müdahale\.?\s*=\s*(\d+)/i);
+            if (acilMatch) detaylar.acilMudahale = parseInt(acilMatch[1]);
+            
+            return detaylar;
+        }
+
+        function displayStats() {
+            const statsSection = document.getElementById('statsSection');
+            
+            document.getElementById('totalItems').textContent = parsedData.length;
+            document.getElementById('validItems').textContent = validCount;
+            document.getElementById('errorItems').textContent = errorCount;
+            
+            statsSection.style.display = 'grid';
+        }
+
+        function showWarningAndActions() {
+            document.getElementById('warningBox').style.display = 'block';
+            document.getElementById('actionButtons').style.display = 'flex';
+        }
+
+        function hideWarningAndActions() {
+            document.getElementById('warningBox').style.display = 'none';
+            document.getElementById('actionButtons').style.display = 'none';
+        }
+
+        async function deleteAndSave() {
+            if (parsedData.length === 0) {
+                showStatus('❌ Kaydedilecek veri yok!', 'error');
+                return;
+            }
+
+            if (!confirm('Bu işlem mevcut koleksiyondaki TÜM verileri silecek ve yeni verilerle değiştirecektir. Emin misiniz?')) {
+                return;
+            }
+
+            const deleteBtn = document.getElementById('deleteBtn');
+            deleteBtn.disabled = true;
+
+            try {
+                showLoading(true, 'Mevcut koleksiyon siliniyor...');
+                updateProgress(10);
+
+                // Önce mevcut koleksiyonu sil
+                await deleteCollection();
+                
+                updateProgress(30, 'Eski veriler silindi, yeni veriler kaydediliyor...');
+                
+                // Yeni verileri kaydet
+                await saveNewData();
+                
+                updateProgress(100, 'İşlem tamamlandı!');
+                showLoading(false);
+                
+                showStatus(`🎉 İşlem başarıyla tamamlandı! ${parsedData.length} kayıt "${COLLECTION_NAME}" koleksiyonuna kaydedildi.`, 'success');
+                
+                // UI'yi temizle
+                setTimeout(() => {
+                    hideWarningAndActions();
+                    document.getElementById('statsSection').style.display = 'none';
+                }, 3000);
+
+            } catch (error) {
+                showLoading(false);
+                showStatus(`❌ İşlem hatası: ${error.message}`, 'error');
+                console.error('İşlem hatası:', error);
+            } finally {
+                deleteBtn.disabled = false;
+            }
+        }
+
+        async function deleteCollection() {
+            const snapshot = await db.collection(COLLECTION_NAME).get();
+            
+            if (snapshot.empty) {
+                console.log('Koleksiyon zaten boş');
+                return;
+            }
+
+            const batch = db.batch();
+            snapshot.docs.forEach(doc => {
+                batch.delete(doc.ref);
+            });
+
+            await batch.commit();
+            console.log(`${snapshot.size} doküman silindi`);
+        }
+
+        async function saveNewData() {
+            const batchSize = 500;
+            const batches = [];
+
+            for (let i = 0; i < parsedData.length; i += batchSize) {
+                const batch = db.batch();
+                const batchData = parsedData.slice(i, i + batchSize);
+                
+                batchData.forEach(item => {
+                    const docRef = db.collection(COLLECTION_NAME).doc(item.kod);
+                    batch.set(docRef, item);
+                });
+
+                batches.push(batch);
+            }
+
+            for (let i = 0; i < batches.length; i++) {
+                await batches[i].commit();
+                const progress = 30 + ((i + 1) / batches.length) * 70;
+                updateProgress(progress, `Batch ${i + 1}/${batches.length} kaydedildi`);
+            }
+        }
+
+        function clearAll() {
+            document.getElementById('dataInput').value = '';
+            document.getElementById('status').innerHTML = '';
+            document.getElementById('statsSection').style.display = 'none';
+            hideWarningAndActions();
+            parsedData = [];
+            validCount = 0;
+            errorCount = 0;
+            updateProgress(0);
+            showStatus('🗑️ Tüm veriler temizlendi', 'info');
+        }
+
+        window.onload = function() {
+            showStatus('📝 Malzeme verilerinizi yukarıdaki alana yapıştırın ve "Veriyi Kontrol Et" butonuna basın. Hem TAB ile ayrılmış hem de çok satırlı formatlar desteklenmektedir.', 'info');
+        };
+    </script>
+</body>
+</html>
